@@ -1,0 +1,16 @@
+{
+  "name": "auth-function",
+  "version": "1.0.0",
+  "description": "Azure Function para Autenticacao de Cliente",
+  "scripts": {
+    "start": "func start",
+    "test": "echo \"No test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.0.0",
+    "cpf-cnpj-validator": "^1.0.3",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.3"
+  },
+  "main": "src/functions/authClient.js"
+}
