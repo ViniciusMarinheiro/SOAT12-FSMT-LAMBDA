@@ -17,28 +17,28 @@ provider "azurerm" {
   features {}
 }
 
-# 1. Recupera o Resource Group (que está no East US 2, mas tudo bem)
+# 1. Recupera o Resource Group (que está no East US 2)
 data "azurerm_resource_group" "rg" {
   name = "rg-fsmt-soat12"
 }
 
 # 2. Storage Account
-# MUDANÇA 1: Região West US 2
-# MUDANÇA 2: Nome novo (v2) para evitar conflito com o anterior
+# MUDANÇA 1: Região North Europe (Irlanda) - Geralmente tem cota para estudantes
+# MUDANÇA 2: Nome v3
 resource "azurerm_storage_account" "sa_func" {
-  name                     = "stfuncsoat12fsmtv2" 
+  name                     = "stfuncsoat12fsmtv3" 
   resource_group_name      = data.azurerm_resource_group.rg.name
-  location                 = "westus2" 
+  location                 = "northeurope" 
   account_tier             = "Standard"
   account_replication_type = "LRS"
 }
 
-# 3. Plano de Serviço (B1 em West US 2)
-# A região West US 2 costuma ter cota liberada para B1
+# 3. Plano de Serviço
+# Tentamos B1 (Basic) na Europa. Se falhar, a última opção será Windows.
 resource "azurerm_service_plan" "asp" {
   name                = "asp-func-soat12"
   resource_group_name = data.azurerm_resource_group.rg.name
-  location            = "westus2"
+  location            = "northeurope"
   os_type             = "Linux"
   sku_name            = "B1" 
 }
@@ -47,7 +47,7 @@ resource "azurerm_service_plan" "asp" {
 resource "azurerm_linux_function_app" "func_app" {
   name                = "func-auth-soat12"
   resource_group_name = data.azurerm_resource_group.rg.name
-  location            = "westus2"
+  location            = "northeurope"
 
   storage_account_name       = azurerm_storage_account.sa_func.name
   storage_account_access_key = azurerm_storage_account.sa_func.primary_access_key
