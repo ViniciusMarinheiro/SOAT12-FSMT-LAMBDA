@@ -5,8 +5,8 @@ on:
     branches: ["main"]
 
 env:
-  AZURE_FUNCTIONAPP_NAME: 'func-auth-soat12'   # Tem que bater com o nome no terraform
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'          # Raiz do repo
+  AZURE_FUNCTIONAPP_NAME: 'func-auth-soat12'
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'
   NODE_VERSION: '18.x'
 
 jobs:
@@ -18,6 +18,14 @@ jobs:
         shell: bash
         working-directory: ./terraform
     
+    # CORREÇÃO AQUI: Definimos as credenciais no nível do JOB
+    # Assim, o 'terraform init' já consegue ler o Storage Account
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
     steps:
     - uses: actions/checkout@v3
     - uses: hashicorp/setup-terraform@v2
@@ -26,11 +34,6 @@ jobs:
 
     - run: terraform init
     - run: terraform apply -auto-approve -input=false
-      env:
-        ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-        ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-        ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
   deploy-code:
     name: 'Deploy Node.js Code'
@@ -51,20 +54,17 @@ jobs:
         npm run build --if-present
         npm prune --production
 
-    # Login na Azure (Obrigatório para o deploy funcionar sem publish profile)
     - name: Azure Login
       uses: azure/login@v1
       with:
         creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
 
-    # O Deploy em si
     - name: 'Run Azure Functions Action'
       uses: Azure/functions-action@v1
       with:
         app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
         package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
     
-    # Passo Opcional: Atualizar as App Settings automaticamente com as Secrets do GitHub
     - name: Update App Settings
       run: |
         az functionapp config appsettings set --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group rg-fsmt-soat12 --settings "DB_CONNECTION_STRING=${{ secrets.DB_CONNECTION_STRING }}" "JWT_SECRET=${{ secrets.JWT_SECRET }}"
