@@ -23,28 +23,27 @@ data "azurerm_resource_group" "rg" {
 }
 
 # 2. Storage Account
-# Mantivemos o nome v3 para garantir unicidade
+# Mudamos o nome para v4 para garantir um storage limpo
 resource "azurerm_storage_account" "sa_func" {
-  name                     = "stfuncsoat12fsmtv3"
+  name                     = "stfuncsoat12fsmtv4"
   resource_group_name      = data.azurerm_resource_group.rg.name
   location                 = data.azurerm_resource_group.rg.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
 }
 
-# 3. Plano de Serviço (MUDANÇA: WINDOWS)
-# Mudamos para Windows para usar um "balde" de cota diferente
+# 3. Plano de Serviço (WINDOWS CONSUMPTION)
+# Y1 = Serverless Puro (Dynamic). Não usa cota de "Basic VMs".
 resource "azurerm_service_plan" "asp" {
   name                = "asp-func-soat12"
   resource_group_name = data.azurerm_resource_group.rg.name
   location            = data.azurerm_resource_group.rg.location
   
-  os_type             = "Windows" # <--- MUDANÇA CRÍTICA
-  sku_name            = "B1"      # Basic Tier
+  os_type             = "Windows" 
+  sku_name            = "Y1"      
 }
 
-# 4. A Function App (MUDANÇA: WINDOWS FUNCTION)
-# Note que o recurso agora é "azurerm_windows_function_app"
+# 4. A Function App (WINDOWS)
 resource "azurerm_windows_function_app" "func_app" {
   name                = "func-auth-soat12"
   resource_group_name = data.azurerm_resource_group.rg.name
@@ -56,10 +55,11 @@ resource "azurerm_windows_function_app" "func_app" {
 
   site_config {
     application_stack {
-      node_version = "~18" # Sintaxe para Node no Windows Function
+      node_version = "~18"
     }
-    # Always On ligado no plano B1
-    always_on = true
+    # Always On NÃO é suportado no plano Y1 (Consumption), deve ser false
+    always_on = false 
+    use_32_bit_worker = true # Otimização para planos free/consumption
   }
 
   app_settings = {
