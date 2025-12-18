@@ -17,32 +17,33 @@ provider "azurerm" {
   features {}
 }
 
-# 1. Recupera o Resource Group existente
+# 1. Recupera o Resource Group (East US 2)
 data "azurerm_resource_group" "rg" {
   name = "rg-fsmt-soat12"
 }
 
-# 2. Storage Account (Obrigatório para a Function funcionar)
+# 2. Storage Account
 resource "azurerm_storage_account" "sa_func" {
-  name                     = "stfuncsoat12fsmt" # Deve ser único globalmente
+  name                     = "stfuncsoat12fsmt" 
   resource_group_name      = data.azurerm_resource_group.rg.name
   location                 = data.azurerm_resource_group.rg.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
 }
 
-# 3. Plano de Serviço (Consumption / Serverless)
+# 3. Plano de Serviço (MUDANÇA AQUI)
+# Trocamos Y1 (Bloqueado) por B1 (Liberado em contas pagas)
 resource "azurerm_service_plan" "asp" {
   name                = "asp-func-soat12"
   resource_group_name = data.azurerm_resource_group.rg.name
   location            = data.azurerm_resource_group.rg.location
   os_type             = "Linux"
-  sku_name            = "Y1" # Y1 = Serverless (Paga por execução)
+  sku_name            = "B1" # B1 = Basic (Dedica uma VM pequena, evita erro de cota Dynamic)
 }
 
-# 4. A Function App (Node.js)
+# 4. A Function App
 resource "azurerm_linux_function_app" "func_app" {
-  name                = "func-auth-soat12" # URL: https://func-auth-soat12.azurewebsites.net
+  name                = "func-auth-soat12"
   resource_group_name = data.azurerm_resource_group.rg.name
   location            = data.azurerm_resource_group.rg.location
 
@@ -54,7 +55,9 @@ resource "azurerm_linux_function_app" "func_app" {
     application_stack {
       node_version = "18"
     }
-    # Cors (opcional, mas bom para evitar erro se chamar do front)
+    # No plano B1, Always On deve ser true para evitar cold starts
+    always_on = true
+    
     cors {
       allowed_origins = ["*"]
     }
@@ -62,7 +65,7 @@ resource "azurerm_linux_function_app" "func_app" {
 
   app_settings = {
     "FUNCTIONS_WORKER_RUNTIME" = "node"
-    # Placeholder: As variáveis reais (DB e JWT) serão injetadas via App Settings no Portal ou CLI
+    # As connection strings serão injetadas pelo Pipeline
   }
 }
 
