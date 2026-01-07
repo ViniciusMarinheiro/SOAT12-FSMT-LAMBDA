@@ -3,14 +3,26 @@
   "version": "1.0.0",
   "description": "Azure Function para Autenticacao de Cliente",
   "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "prestart": "npm run build",
     "start": "func start",
+    "dev": "concurrently \"npm run watch\" \"npm start\"",
     "test": "echo \"No test specified\" && exit 1"
   },
   "dependencies": {
     "@azure/functions": "^4.0.0",
     "cpf-cnpj-validator": "^1.0.3",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.11.3"
+    "pg": "^8.11.3",
+    "zod": "^3.25.76"
   },
-  "main": "src/functions/authClient.js"
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^20.10.6",
+    "@types/pg": "^8.10.9",
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3"
+  },
+  "main": "dist/functions/authClient/index.js"
 }
