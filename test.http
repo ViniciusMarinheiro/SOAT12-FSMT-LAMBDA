@@ -1,0 +1,27 @@
+### Teste authClient
+POST http://localhost:7071/api/authClient
+Content-Type: application/json
+
+{
+  "cpf": "48030846886"
+}
+
+### Teste authClient com CPF invalido
+POST http://localhost:7071/api/authClient
+Content-Type: application/json
+
+{
+  "cpf": "wadw"
+}
+
+
+### Teste notification
+POST http://localhost:7071/api/notification
+Content-Type: application/json
+
+{
+  "recipient": "rodrigotavaresfranco@gmail.com",
+  "subject": "Teste",
+  "body": "Teste",
+  "channel": "email"
+}
