@@ -1,0 +1,74 @@
+name: Deploy Notification Function
+
+on:
+  push:
+    branches:
+      - 'master'                         
+      - 'feat/terraform-azure-functions' 
+    paths:
+      - 'NotificationFunc/**'
+
+env:
+  AZURE_FUNCTIONAPP_NAME: 'func-notification-soat12'
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: './NotificationFunc' # Caminho da aplicação Node
+  NODE_VERSION: '18.x'
+  TF_STATE_KEY: 'notification.tfstate'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v4
+
+      # --- 1. LOGIN E CREDENCIAIS ---
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Extract Credentials for Terraform
+        run: |
+          echo "ARM_CLIENT_ID=${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}" >> $GITHUB_ENV
+          echo "ARM_CLIENT_SECRET=${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}" >> $GITHUB_ENV
+          echo "ARM_SUBSCRIPTION_ID=${{ fromJson(secrets.AZURE_CREDENTIALS).subscriptionId }}" >> $GITHUB_ENV
+          echo "ARM_TENANT_ID=${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}" >> $GITHUB_ENV
+
+      # --- 2. INFRAESTRUTURA (TERRAFORM) ---
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init
+        working-directory: ./NotificationFunc/terraform
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=rg-terraform-state-soat12" \
+            -backend-config="storage_account_name=stterraformstate12soat" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=${{ env.TF_STATE_KEY }}"
+
+      - name: Terraform Apply
+        working-directory: ./NotificationFunc/terraform
+        run: terraform apply -auto-approve
+        # Mesmo que a Notification não use banco agora, deixamos pronto ou removemos se preferir
+        env:
+          TF_VAR_db_connection_string: ${{ secrets.DB_CONNECTION_STRING }}
+
+      # --- 3. BUILD E DEPLOY (NODE.JS) ---
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Instalar Dependências e Build
+        working-directory: ./NotificationFunc
+        run: |
+          npm install
+          npm run build --if-present
+          npm prune --production
+
+      - name: Deploy na Azure Function
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}

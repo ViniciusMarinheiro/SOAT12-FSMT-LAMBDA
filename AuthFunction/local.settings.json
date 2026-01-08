@@ -1,0 +1,9 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "DB_CONNECTION_STRING": "postgresql://postgres:postgres@localhost:5432/oficina_db",
+    "JWT_SECRET": "minha-chave-super-secreta-padrao"
+  },
+  "ConnectionStrings": {}
+}
